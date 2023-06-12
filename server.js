@@ -1,10 +1,15 @@
+require('dotenv').config()
+
 const express = require("express");
 const morgan = require("morgan");
-
-const app = express();
-const PORT = 8000 || process.env.PORT;
+var bcrypt = require('bcryptjs');
 
 const api = require("./api");
+const sequelize = require('./lib/sequelize')
+
+const app = express();
+const port = process.env.PORT || 8000
+
 app.use(morgan("dev"));
 app.use(express.json());
 
@@ -23,6 +28,8 @@ app.use("*", function (err, req, res, next) {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`== Server is running on port ${PORT}`);
+sequelize.sync().then(function () {
+  app.listen(port, function() {
+    console.log("== Server is running on port", port);
+  })
 });
