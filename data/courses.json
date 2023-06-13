@@ -1,0 +1,23 @@
+[
+  {
+    "subject": "CS",
+    "number": "493",
+    "title": "Cloud Application Development",
+    "term": "sp22",
+    "instructorId": 123
+  },
+  {
+    "subject": "CS",
+    "number": "492",
+    "title": "Mobile App Development",
+    "term": "sp22",
+    "instructorId": 124
+  },
+  {
+    "subject": "PAC",
+    "number": "111",
+    "title": "Badminton",
+    "term": "fa23",
+    "instructorId": 101
+  }
+]
