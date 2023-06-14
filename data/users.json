@@ -1,104 +1,104 @@
 [
-    {
-      "name": "Nickk Arzner",
-      "email": "nickk@osu.edu",
-      "password": "hunter2",
-      "role": "student"
-    },
-    {
-      "name": "Torii Lockwood",
-      "email": "torii@osu.edu",
-      "password": "hunter2",
-      "role": "student"
-    },
-    {
-      "name": "Brittanii Lipscomb",
-      "email": "geekss@osu.edu",
-      "password": "hunter2",
-      "role": "student"
-    },
-    {
-      "name": "The Ownerss",
-      "email": "ownerss@osu.edu",
-      "password": "hunter2",
-      "role": "student"
-    },
-    {
-      "name": "Kimm Marchesi",
-      "email": "kimm@osu.edu",
-      "password": "hunter2",
-      "role": "student"
-    },
-    {
-      "name": "Williamm McCanless",
-      "email": "williamm@osu.edu",
-      "password": "hunter2",
-      "role": "student"
-    },
-    {
-      "name": "Paull Turner",
-      "email": "paull@osu.edu",
-      "password": "hunter2",
-      "role": "student"
-    },
-    {
-      "name": "Codyy Utzman",
-      "email": "codyy@osu.edu",
-      "password": "hunter2",
-      "role": "student"
-    },
-    {
-      "name": "Wincoo Employees",
-      "email": "employeess@osu.edu",
-      "password": "hunter2",
-      "role": "student"
-    },
-    {
-      "name": "Philipp Wilson",
-      "email": "philibn@osu.edu",
-      "password": "hunter2",
-      "role": "student"
-    },
-    {
-      "name": "Fredd Meyer",
-      "email": "fredd@osu.edu",
-      "password": "hunter2",
-      "role": "student"
-    },
-    {
-      "name": "Mikee Easter",
-      "email": "mikee@osu.edu",
-      "password": "hunter2",
-      "role": "student"
-    },
-    {
-      "name": "Caseyy Collett",
-      "email": "caseyy@osu.edu",
-      "password": "hunter2",
-      "role": "student"
-    },
-    {
-      "name": "Johnn Semadeni",
-      "email": "johnn@osu.edu",
-      "password": "hunter2",
-      "role": "student"
-    },
-    {
-      "name": "Alex Spaeth",
-      "email": "alex@osu.edu",
-      "password": "hunter2",
-      "role": "student"
-    },
-    {
-      "name": "Tristan James",
-      "email": "tristan@osu.edu",
-      "password": "hunter2",
-      "role": "instructor"
-    },
-    {
-      "name": "Jay Chan",
-      "email": "jay@osu.edu",
-      "password": "hunter2",
-      "role": "admin"
-    }
-  ]
+  {
+    "name": "Nickk Arzner",
+    "email": "nickk@osu.edu",
+    "password": "hunter2",
+    "role": "student"
+  },
+  {
+    "name": "Torii Lockwood",
+    "email": "torii@osu.edu",
+    "password": "hunter2",
+    "role": "student"
+  },
+  {
+    "name": "Brittanii Lipscomb",
+    "email": "geekss@osu.edu",
+    "password": "hunter2",
+    "role": "student"
+  },
+  {
+    "name": "The Ownerss",
+    "email": "ownerss@osu.edu",
+    "password": "hunter2",
+    "role": "student"
+  },
+  {
+    "name": "Kimm Marchesi",
+    "email": "kimm@osu.edu",
+    "password": "hunter2",
+    "role": "student"
+  },
+  {
+    "name": "Williamm McCanless",
+    "email": "williamm@osu.edu",
+    "password": "hunter2",
+    "role": "student"
+  },
+  {
+    "name": "Paull Turner",
+    "email": "paull@osu.edu",
+    "password": "hunter2",
+    "role": "student"
+  },
+  {
+    "name": "Codyy Utzman",
+    "email": "codyy@osu.edu",
+    "password": "hunter2",
+    "role": "student"
+  },
+  {
+    "name": "Wincoo Employees",
+    "email": "employeess@osu.edu",
+    "password": "hunter2",
+    "role": "student"
+  },
+  {
+    "name": "Philipp Wilson",
+    "email": "philibn@osu.edu",
+    "password": "hunter2",
+    "role": "student"
+  },
+  {
+    "name": "Fredd Meyer",
+    "email": "fredd@osu.edu",
+    "password": "hunter2",
+    "role": "student"
+  },
+  {
+    "name": "Mikee Easter",
+    "email": "mikee@osu.edu",
+    "password": "hunter2",
+    "role": "student"
+  },
+  {
+    "name": "Caseyy Collett",
+    "email": "caseyy@osu.edu",
+    "password": "hunter2",
+    "role": "student"
+  },
+  {
+    "name": "Johnn Semadeni",
+    "email": "johnn@osu.edu",
+    "password": "hunter2",
+    "role": "student"
+  },
+  {
+    "name": "Alex Spaeth",
+    "email": "alex@osu.edu",
+    "password": "hunter2",
+    "role": "student"
+  },
+  {
+    "name": "Tristan James",
+    "email": "tristan@osu.edu",
+    "password": "hunter2",
+    "role": "instructor"
+  },
+  {
+    "name": "Jay Chan",
+    "email": "jay@osu.edu",
+    "password": "hunter2",
+    "role": "admin"
+  }
+]
