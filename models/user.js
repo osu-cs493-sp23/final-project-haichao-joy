@@ -31,6 +31,14 @@ exports.UserClientFields = ["name", "email", "password", "role"];
 
 exports.validateUser = async function (email, password) {
   const user = await User.findOne({ where: { email } });
-  // check the password
-  return user && bcrypt.compareSync(password, user.password);
+  // // check the password
+  // return user && bcrypt.compareSync(password, user.password);
+  //const user = await getUserByEmail(email, true);
+  console.log(user.password)
+
+  if (user && await bcrypt.compare(password, user.password)) {
+      return user;
+  } else {
+      return null;
+  }
 };

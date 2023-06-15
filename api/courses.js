@@ -3,20 +3,56 @@ const { ValidationError } = require("sequelize");
 
 const router = Router();
 const json2csv = require("json2csv").parse;
+const courses = require('../data/courses');
+
 const { Course, CourseClientFields } = require("../models/course");
 const { User } = require("../models/user");
 const { Assignment } = require("../models/assignment");
 
 // Fetch a list of all courses
 router.get("/", async function (req, res, next) {
+  console.log("  -- req.query:", req.query)
+  let page = parseInt(req.query.page) || 1;
+  const pageSize = 10;
+  const lastPage = Math.ceil(courses.length / pageSize);
+  page = page < 1 ? 1 : page;
+  page = page > lastPage ? lastPage : page;
+
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize;
+  const pageCourses = courses.slice(start, end);
+
+  /*
+   * Generate HATEOAS links for surrounding pages.
+   */
+  const links = {};
+  if (page < lastPage) {
+    links.nextPage = `/courses?page=${page + 1}`;
+    links.lastPage = `/courses?page=${lastPage}`;
+  }
+  if (page > 1) {
+    links.prevPage = `/courses?page=${page - 1}`;
+    links.firstPage = '/courses?page=1';
+  }
+
+  /*
+   * Construct and send response.
+   */
   try {
-    const result = await Course.findAndCountAll();
+    //const result = await Course.findAndCountAll();
     res.status(200).json({
-      courses: result.rows,
+      //courses: result.rows,
+      courses: pageCourses,
+      page: page,
+      pageSize: pageSize,
+      lastPage: lastPage,
+      total: courses.length,
+      links: links
     });
   } catch (e) {
     next(e);
   }
+
 });
 
 // Create a new Course
