@@ -2,8 +2,10 @@ const { Router } = require("express");
 const { ValidationError } = require("sequelize");
 
 const router = Router();
+const json2csv = require("json2csv").parse;
 const { Course, CourseClientFields } = require("../models/course");
 const { User } = require("../models/user");
+const { Assignment } = require("../models/assignment");
 
 // Fetch a list of all courses
 router.get("/", async function (req, res, next) {
@@ -200,7 +202,7 @@ router.post("/:id/students", async function (req, res, next) {
   const courseId = req.params.id;
 
   try {
-    const courseData = await Course.findByPk(courseId);
+    const courseData = await Course.findOne({ where: { id: courseId } });
     if (!courseData) {
       res.status(404).send({ error: "Requested resource does not exist" });
       return;
@@ -257,11 +259,96 @@ router.post("/:id/students", async function (req, res, next) {
   }
 });
 
-router.post("/:id/roster", function (req, res, next) {
-  // Fetch a CSV file containing list of the student enrolled in the Course
+// Fetch a CSV file containing list of the student enrolled in the Course
+// ※※※※ Currently, this endpoint does not contain authentication
+/*******************************************************************
+ * Only an authenticated User with 'admin' role or
+ * an authenticated 'instructor' User whose ID matches the instructorId
+ * of the Course can fetch the course roster.
+ *******************************************************************/
+router.get("/:id/roster", async function (req, res, next) {
+  const courseId = req.params.id;
+  var courseData = null;
+
+  try {
+    courseData = await Course.findOne({ where: { id: courseId } });
+
+    if (!courseData) {
+      res.status(404).send({ error: "Requested resource does not exist" });
+      return;
+    }
+  } catch (e) {
+    next();
+  }
+
+  try {
+    const resultList = await User.findAll({
+      where: { role: "student" },
+      include: {
+        model: Course,
+        as: "courses",
+        where: { id: courseId },
+      },
+    });
+
+    var studentList = [];
+
+    resultList.forEach((student) => {
+      studentList.push({
+        id: student.dataValues.id,
+        name: student.dataValues.name,
+        email: student.dataValues.email,
+      });
+    });
+
+    const csvData = json2csv(studentList);
+    const csvFilename = "studentList-" + Date.now() + ".csv";
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Pragma", "no-cache");
+    res.attachment(csvFilename);
+    res.status(200).send(csvData);
+  } catch (e) {
+    if (e instanceof ValidationError) {
+      res.status(400).send({ error: e.message });
+    } else {
+      next(e);
+    }
+  }
 });
 
-router.post("/:id/assignments", function (req, res, next) {
-  // Fetch a list of the Assignments for the Course
+// Fetch a list of the Assignments for the Course
+// ※※※※ Currently, this endpoint does not contain authentication
+/*******************************************************************
+ * Only an authenticated User with 'admin' role or
+ * an authenticated 'instructor' User whose ID matches the instructorId
+ * of the Course can update the students enrolled in the Course.
+ *******************************************************************/
+router.get("/:id/assignments", async function (req, res, next) {
+  const courseId = req.params.id;
+  var courseData = null;
+
+  try {
+    courseData = await Course.findOne({ where: { id: courseId } });
+  } catch (e) {
+    next(e);
+  }
+
+  if (!courseData) {
+    res.status(404).send({ error: "Requested resource does not exist" });
+    return;
+  }
+
+  try {
+    const assignmentList = await Assignment.findAll({
+      where: { courseId: courseId },
+    });
+
+    res.status(200).json({
+      assignment: assignmentList,
+    });
+  } catch (e) {
+    next();
+  }
 });
 module.exports = router;
