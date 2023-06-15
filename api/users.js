@@ -4,6 +4,7 @@ const { ValidationError } = require('sequelize')
 //const { Business } = require('../models/business')
 //const { Photo } = require('../models/photo')
 //const { Review } = require('../models/review')
+const { Course } = require('../models/course')
 const { User, UserClientFields, validateUser } = require('../models/user')
 const { generateAuthToken, requireAuthentication, isAdminLoggedIn, isAdmin } = require("../lib/auth")
 
@@ -201,8 +202,23 @@ router.get('/:userId', requireAuthentication, async function (req, res, next) {
   const userId = req.params.userId
   try {
     const userr = await User.findByPk(userId, { attributes: { exclude: ['password']}})
-    if (userr) {
-      res.status(200).send(userr);
+    if (user.role == "instructor") {
+      const userCoursesTeach = await Course.findAll({ where: { instructorId: userId}})
+      var results = {userr, CoursesTeaching: userCoursesTeach}
+    }
+    else if (user.role == "student") {
+      const userCoursesEnrolledin = await Course.findAll({
+        include: { model: User, 
+        as: "users", 
+        where: { id: userId}, 
+      }})
+      var results = {userr, CoursesTaking: userCoursesEnrolledin}
+    }
+    else {
+      var results = { user: userr }
+    }
+    if (results) {
+      res.status(200).send(results);
     } else {
       next()
     }
