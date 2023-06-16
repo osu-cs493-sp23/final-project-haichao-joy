@@ -98,13 +98,14 @@ const e = require('express')
 router.post('/', async function (req, res, next) {
   let obj = req.body
   if ((obj.hasOwnProperty('password') != false) && obj && req.body.name && req.body.email && req.body.role){
-  var salt = bcrypt.genSaltSync(10);
-  var hash = bcrypt.hashSync(req.body.password, salt);
+  //var salt = bcrypt.genSaltSync(10);
+  //var hash = bcrypt.hashSync(req.body.password, salt);
   
   if (req.body.role !== "admin" && req.body.role !== "instructor" /*|| obj.hasOwnProperty('admin') == false*/) {
   try {
     const user = await User.create(
-      Object.assign(req.body, {password: hash})
+      //Object.assign(req.body, {password: hash})
+      Object.assign(req.body)
     )
     res.status(201).send({ id: user.id })
   } catch (e) {
@@ -130,7 +131,7 @@ router.post('/', async function (req, res, next) {
             console.log("--is admin")
             try {
               const user = await User.create(
-                Object.assign(req.body, {password: hash})
+                Object.assign(req.body, /*{password: hash}*/)
               )
               //console.log("-- user: ", user)
           
@@ -205,7 +206,7 @@ router.get('/:userId', requireAuthentication, async function (req, res, next) {
     const userr = await User.findByPk(userId, { attributes: { exclude: ['password']}})
     if (user.role == "instructor") {
       const userCoursesTeach = await Course.findAll({ where: { instructorId: userId}})
-      var results = {userr, CoursesTeaching: userCoursesTeach}
+      var results = {user: userr, CoursesTeaching: userCoursesTeach}
     }
     else if (user.role == "student") {
       const userCoursesEnrolledin = await Course.findAll({
@@ -213,7 +214,7 @@ router.get('/:userId', requireAuthentication, async function (req, res, next) {
         as: "users", 
         where: { id: userId}, 
       }})
-      var results = {userr, CoursesTaking: userCoursesEnrolledin}
+      var results = {user: userr, CoursesTaking: userCoursesEnrolledin}
     }
     else {
       var results = { user: userr }

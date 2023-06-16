@@ -12,9 +12,9 @@ const User = sequelize.define("user", {
   email: { type: DataTypes.STRING, allowNull: false, unique: true },
   password: {
     type: DataTypes.STRING,
-    // set(value) {
-    //     this.setDataValue('password', hash(value));
-    // },
+    set(password) {
+      this.setDataValue('password', bcrypt.hashSync(password, bcrypt.genSaltSync(10)));
+    },
     allowNull: false,
   },
   //admin: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
