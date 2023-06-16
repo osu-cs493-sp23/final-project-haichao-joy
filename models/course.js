@@ -41,9 +41,9 @@ User.belongsToMany(Course, {
 });
 
 Course.hasMany(Assignment, {
+  foreignKey: { allowNull: false },
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
-  foreignKey: { allowNull: false },
 });
 Assignment.belongsTo(Course);
 

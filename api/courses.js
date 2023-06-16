@@ -3,15 +3,16 @@ const { ValidationError } = require("sequelize");
 
 const router = Router();
 const json2csv = require("json2csv").parse;
-const courses = require('../data/courses');
+const courses = require("../data/courses");
 
 const { Course, CourseClientFields } = require("../models/course");
 const { User } = require("../models/user");
 const { Assignment } = require("../models/assignment");
+const { generateAuthToken, requireAuthentication } = require("../lib/auth");
 
 // Fetch a list of all courses
 router.get("/", async function (req, res, next) {
-  console.log("  -- req.query:", req.query)
+  console.log("  -- req.query:", req.query);
   let page = parseInt(req.query.page) || 1;
   const pageSize = 10;
   const lastPage = Math.ceil(courses.length / pageSize);
@@ -32,7 +33,7 @@ router.get("/", async function (req, res, next) {
   }
   if (page > 1) {
     links.prevPage = `/courses?page=${page - 1}`;
-    links.firstPage = '/courses?page=1';
+    links.firstPage = "/courses?page=1";
   }
 
   /*
@@ -47,22 +48,38 @@ router.get("/", async function (req, res, next) {
       pageSize: pageSize,
       lastPage: lastPage,
       total: courses.length,
-      links: links
+      links: links,
     });
   } catch (e) {
     next(e);
   }
-
 });
 
 // Create a new Course
-// ※※※※ Currently, this endpoint does not contain authentication
 /*******************************************************************
  * Only an authenticated User with 'admin' role can create a new Course.
  ********************************************************************/
-router.post("/", async function (req, res, next) {
+router.post("/", requireAuthentication, async function (req, res, next) {
   try {
+    if (!req.user) {
+      res
+        .status(403)
+        .send({ error: "Unauthorized to access the specified resource." });
+      return;
+    }
+
+    const user = await User.findByPk(req.user);
+    const isAdmin = user.role === "admin" ? true : false;
+
+    if (!isAdmin) {
+      res
+        .status(403)
+        .send({ error: "Unauthorized to access the specified resource." });
+      return;
+    }
+
     const course = await Course.create(req.body, CourseClientFields);
+
     res.status(201).send({ id: course.id });
   } catch (e) {
     if (e instanceof ValidationError) {
@@ -90,24 +107,48 @@ router.get("/:id", async function (req, res, next) {
 });
 
 // Update data for a specific Course
-// ※※※※ Currently, this endpoint does not contain authentication
 /*******************************************************************
  * Performs a partial update on the data for the Course.
  * Note that enrolled students and assignments cannot be modified via this endpoint.
  * Only an authenticated User with 'admin' role or an authenticated 'instructor' User
  * whose ID matches the instructorId of the Course can update Course information.
  ********************************************************************/
-router.patch("/:id", async function (req, res, next) {
+router.patch("/:id", requireAuthentication, async function (req, res, next) {
   const courseId = req.params.id;
+
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
+
   try {
     const courseData = await Course.findOne({ where: { id: courseId } });
 
     // if the data does not exist
     if (!courseData) {
       res.status(404).send({ error: "Requested resource does not exist" });
+      return;
     }
 
     try {
+      const user = await User.findByPk(req.user);
+      const isAdmin = user.role === "admin" ? true : false;
+      const isInstructor = user.role === "instructor" ? true : false;
+
+      if (
+        !(
+          isAdmin ||
+          (isInstructor && courseData.dataValues.instructorId === user.id)
+        )
+      ) {
+        res
+          .status(403)
+          .send({ error: "Unauthorized to access the specified resource." });
+        return;
+      }
+
       const result = await Course.update(req.body, {
         where: { id: courseId },
         fields: CourseClientFields,
@@ -130,12 +171,19 @@ router.patch("/:id", async function (req, res, next) {
 });
 
 // Remove a specific Course from the database
-// ※※※※ Currently, this endpoint does not contain authentication
 /*******************************************************************
  * Only an authenticated User with 'admin' role can remove a Course.
  ********************************************************************/
-router.delete("/:id", async function (req, res, next) {
+router.delete("/:id", requireAuthentication, async function (req, res, next) {
   const courseId = req.params.id;
+
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
+
   try {
     const courseData = await Course.findOne({ where: { id: courseId } });
 
@@ -145,6 +193,16 @@ router.delete("/:id", async function (req, res, next) {
     }
 
     try {
+      const user = await User.findByPk(req.user);
+      const isAdmin = user.role === "admin" ? true : false;
+
+      if (!isAdmin) {
+        res
+          .status(403)
+          .send({ error: "Unauthorized to access the specified resource." });
+        return;
+      }
+
       const result = await Course.destroy({
         where: { id: courseId },
       });
@@ -166,13 +224,19 @@ router.delete("/:id", async function (req, res, next) {
 });
 
 // Fetch a list of the students enrolled in the Course
-// ※※※※ Currently, this endpoint does not contain authentication
 /*******************************************************************
  * Only an authenticated User with 'admin' role or
  * an authenticated 'instructor' User whose ID matches
  * the instructorId of the Course can fetch the list of enrolled students.
  *******************************************************************/
 router.get("/:id/students", async function (req, res, next) {
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
+
   const courseId = req.params.id;
   var courseData = null;
 
@@ -186,6 +250,22 @@ router.get("/:id/students", async function (req, res, next) {
     }
   } catch (e) {
     next(e);
+  }
+
+  const user = await User.findByPk(req.user);
+  const isAdmin = user.role === "admin" ? true : false;
+  const isInstructor = user.role === "instructor" ? true : false;
+
+  if (
+    !(
+      isAdmin ||
+      (isInstructor && courseData.dataValues.instructorId === user.id)
+    )
+  ) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
   }
 
   try {
@@ -220,13 +300,19 @@ router.get("/:id/students", async function (req, res, next) {
 });
 
 // Update enrollment for a Course
-// ※※※※ Currently, this endpoint does not contain authentication
 /*******************************************************************
  * Only an authenticated User with 'admin' role or
  * an authenticated 'instructor' User whose ID matches the instructorId
  * of the Course can update the students enrolled in the Course.
  *******************************************************************/
 router.post("/:id/students", async function (req, res, next) {
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
+
   // Check the request body
   if (!(req.body && (req.body.add || req.body.remove))) {
     res.status(400).send({
@@ -241,6 +327,22 @@ router.post("/:id/students", async function (req, res, next) {
     const courseData = await Course.findOne({ where: { id: courseId } });
     if (!courseData) {
       res.status(404).send({ error: "Requested resource does not exist" });
+      return;
+    }
+
+    const user = await User.findByPk(req.user);
+    const isAdmin = user.role === "admin" ? true : false;
+    const isInstructor = user.role === "instructor" ? true : false;
+
+    if (
+      !(
+        isAdmin ||
+        (isInstructor && courseData.dataValues.instructorId === user.id)
+      )
+    ) {
+      res
+        .status(403)
+        .send({ error: "Unauthorized to access the specified resource." });
       return;
     }
 
@@ -285,8 +387,6 @@ router.post("/:id/students", async function (req, res, next) {
           removeFailedArray.push(studentId);
         }
       });
-
-      removeFailedArray.push(studentId);
     }
 
     res.status(201).send();
@@ -296,13 +396,19 @@ router.post("/:id/students", async function (req, res, next) {
 });
 
 // Fetch a CSV file containing list of the student enrolled in the Course
-// ※※※※ Currently, this endpoint does not contain authentication
 /*******************************************************************
  * Only an authenticated User with 'admin' role or
  * an authenticated 'instructor' User whose ID matches the instructorId
  * of the Course can fetch the course roster.
  *******************************************************************/
 router.get("/:id/roster", async function (req, res, next) {
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
+
   const courseId = req.params.id;
   var courseData = null;
 
@@ -315,6 +421,22 @@ router.get("/:id/roster", async function (req, res, next) {
     }
   } catch (e) {
     next();
+  }
+
+  const user = await User.findByPk(req.user);
+  const isAdmin = user.role === "admin" ? true : false;
+  const isInstructor = user.role === "instructor" ? true : false;
+
+  if (
+    !(
+      isAdmin ||
+      (isInstructor && courseData.dataValues.instructorId === user.id)
+    )
+  ) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
   }
 
   try {
@@ -354,13 +476,19 @@ router.get("/:id/roster", async function (req, res, next) {
 });
 
 // Fetch a list of the Assignments for the Course
-// ※※※※ Currently, this endpoint does not contain authentication
 /*******************************************************************
  * Only an authenticated User with 'admin' role or
  * an authenticated 'instructor' User whose ID matches the instructorId
  * of the Course can update the students enrolled in the Course.
  *******************************************************************/
 router.get("/:id/assignments", async function (req, res, next) {
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
+
   const courseId = req.params.id;
   var courseData = null;
 
@@ -372,6 +500,22 @@ router.get("/:id/assignments", async function (req, res, next) {
 
   if (!courseData) {
     res.status(404).send({ error: "Requested resource does not exist" });
+    return;
+  }
+
+  const user = await User.findByPk(req.user);
+  const isAdmin = user.role === "admin" ? true : false;
+  const isInstructor = user.role === "instructor" ? true : false;
+
+  if (
+    !(
+      isAdmin ||
+      (isInstructor && courseData.dataValues.instructorId === user.id)
+    )
+  ) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
     return;
   }
 
