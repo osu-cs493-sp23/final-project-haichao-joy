@@ -4,8 +4,10 @@ const multer = require("multer");
 
 const crypto = require("node:crypto");
 const { Assignment, AssignmentClientFields } = require("../models/assignment");
+const { Course, CourseClientFields } = require("../models/course");
+const { User } = require("../models/user");
 
-const assignments = require("../data/assignments");
+//const assignments = require("../data/assignments");
 
 const { generateAuthToken, requireAuthentication } = require("../lib/auth");
 const router = Router();
@@ -26,8 +28,37 @@ const upload = multer({
 /*
  * Route to create a new assignment.
  */
-router.post("/", async function (req, res, next) {
+router.post("/", requireAuthentication, async function (req, res, next) {
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
   try {
+    //---------------------------AUTH------------------------------------
+    
+
+    const user = await User.findByPk(req.user);
+    const isAdmin = user.role === "admin" ? true : false;
+    const isInstructor = user.role === "instructor" ? true : false;
+    const courseId = req.body.courseId;
+    const courseData = await Course.findOne({where:{id:courseId}})
+    if (!(
+          isAdmin ||
+          (isInstructor && courseData.dataValues.instructorId === user.id)
+        )
+      ) {
+        res
+          .status(403)
+          .send({ error: "Unauthorized to access the specified resource." });
+        return;
+      }
+
+    //-----------------------------------------
+    
+
+
     const assignment = await Assignment.create(
       req.body,
       AssignmentClientFields
@@ -42,7 +73,7 @@ router.post("/", async function (req, res, next) {
     }
   }
 
-  console.log("here");
+  
   // }
 });
 
@@ -68,12 +99,45 @@ router.get("/:assignmentId", async function (req, res, next) {
 /*
  * Route to update data for a assignment.
  */
-router.patch("/:assignmentId", async function (req, res, next) {
+router.patch("/:assignmentId", requireAuthentication, async function (req, res, next) {
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
+
   const assignmentId = req.params.assignmentId;
   const resultbyId = await Assignment.findByPk(req.params.assignmentId);
   //if Id exist
   if (resultbyId) {
+    
     try {
+      //---------------------------AUTH------------------------------------
+    
+
+    const user = await User.findByPk(req.user);
+    const isAdmin = user.role === "admin" ? true : false;
+    const isInstructor = user.role === "instructor" ? true : false;
+
+    //get courseId from Assignment ID
+    const Id = await Assignment.findByPk(req.params.assignmentId)
+    const courseId = Id.courseId;
+    const courseData = await Course.findOne({where:{id:courseId}})
+    if (!(
+          isAdmin ||
+          (isInstructor && courseData.dataValues.instructorId === user.id)
+        )
+      ) {
+        res
+          .status(403)
+          .send({ error: "Unauthorized to access the specified resource." });
+        return;
+      }
+
+    //-----------------------------------------
+
+
       const result = await Assignment.update(req.body, {
         where: { id: assignmentId },
         fields: AssignmentClientFields,
@@ -101,9 +165,42 @@ router.patch("/:assignmentId", async function (req, res, next) {
 /*
  * Route to delete a assignment.
  */
-router.delete("/:assignmentId", async function (req, res, next) {
+router.delete("/:assignmentId", requireAuthentication, async function (req, res, next) {
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
+
   const assignmentId = req.params.assignmentId;
   try {
+
+    //---------------------------AUTH------------------------------------
+    
+
+    const user = await User.findByPk(req.user);
+    const isAdmin = user.role === "admin" ? true : false;
+    const isInstructor = user.role === "instructor" ? true : false;
+
+    //get courseId from Assignment ID
+    const Id = await Assignment.findByPk(req.params.assignmentId)
+    const courseId = Id.courseId;
+
+    const courseData = await Course.findOne({where:{id:courseId}})
+    if (!(
+          isAdmin ||
+          (isInstructor && courseData.dataValues.instructorId === user.id)
+        )
+      ) {
+        res
+          .status(403)
+          .send({ error: "Unauthorized to access the specified resource." });
+        return;
+      }
+
+    //-----------------------------------------
+
     const result = await Assignment.destroy({ where: { id: assignmentId } });
     if (result > 0) {
       res.status(204).send();
@@ -122,117 +219,69 @@ router.delete("/:assignmentId", async function (req, res, next) {
 /*
  * Route to fetch info about a specific assignments.
  */
-router.get("/:assignmentId/submissions", async function (req, res, next) {
-  const assignmentId = req.params.assignmentId;
-  const studentId = req.query.studentId;
+router.get("/:assignmentId/submissions",  async function (req, res, next) {
+  const assignmentId = req.params.assignmentId
+  const assignment = await Assignment.findByPk(assignmentId)
 
-  console.log("  -- req.query:", req.query);
-  let page = parseInt(req.query.page) || 1;
-  const pageSize = 10;
-  const lastPage = Math.ceil(assignments.length / pageSize);
-  page = page < 1 ? 1 : page;
-  page = page > lastPage ? lastPage : page;
 
-  const start = (page - 1) * pageSize;
-  const end = start + pageSize;
-  const pageAssignments = assignments.slice(start, end);
+  let page = parseInt(req.query.page) || 1
+    page = page < 1 ? 1 : page
+    const numPerPage = 10
+    const offset = (page - 1) * numPerPage
 
-  /*
-   * Generate HATEOAS links for surrounding pages.
-   */
-  const links = {};
-  if (page < lastPage) {
-    links.nextPage = `/:assignmentId/submissions?page=${page + 1}`;
-    links.lastPage = `/:assignmentId/submissions?page=${lastPage}`;
+    const result = await Submission.findAndCountAll({
+      where: {assignmentId: assignmentId},
+      limit: numPerPage,
+      offset: offset
+    })
+
+    /*
+    * Generate HATEOAS links for surrounding pages.
+    */
+    const lastPage = Math.ceil(result.count / numPerPage)
+    const links = {}
+    if (page < lastPage) {
+      links.nextPage = `/assignments/${assignmentId}/submissions?page=${page + 1}`
+      links.lastPage = `/assignments/${assignmentId}/submissions?page=${lastPage}`
+    }
+    if (page > 1) {
+      links.prevPage = `/assignments/${assignmentId}/submissions?page=${page - 1}`
+      links.firstPage = `/assignments/${assignmentId}/submissions?page=1`
+    }
+  if (assignment) {
+    const studentId = req.query.studentId
+    if(studentId){
+      const result1 = await Submission.findAll({
+        where: {
+          assignmentId: assignmentId,
+          studentId: studentId
+          } })
+
+      res.status(200).json({
+        submissions: result1.rows,
+        pageNumber: page,
+        totalPages: lastPage,
+        pageSize: numPerPage,
+        totalCount: result1.count,
+        links: links
+      })
+    }else{
+      res.status(200).json({
+        submissions: result.rows,
+        pageNumber: page,
+        totalPages: lastPage,
+        pageSize: numPerPage,
+        totalCount: result.count,
+        links: links
+      })
+    }
+    
+    
   }
-  if (page > 1) {
-    links.prevPage = `/:assignmentId/submissions?page=${page - 1}`;
-    links.firstPage = "/:assignmentId/submissions?page=1";
+  else {
+    next()
   }
-
-  /*
-   * Construct and send response.
-   */
-  try {
-    //const result = await Course.findAndCountAll();
-    res.status(200).json({
-      //courses: result.rows,
-      assignments: pageAssignments,
-      page: page,
-      pageSize: pageSize,
-      lastPage: lastPage,
-      total: assignments.length,
-      links: links,
-    });
-  } catch (e) {
-    next(e);
-  }
-
-  //paging, fetch by id and studentid
-
-  // let page = parseInt(req.query.page) || 1
-  // page = page < 1 ? 1 : page
-  // const numPerPage = 10
-  // const offset = (page - 1) * numPerPage
-
-  // try {
-  //   const result = await Assignment.findByPk(assignmentId
-
-  //   //   {
-  //      // limit: numPerPage,
-  //      // offset: offset
-  //   // }
-  //   )
-  //     if(result){
-  //       //res.send(result)
-  //       const result = await Submission.findOne({
-  //         where: {
-  //           assignmentId: assignmentId,
-  //           studentId: studentId
-  //           } })
-  //       if(result){
-  //         res.send(result)
-  //       }else{
-  //         //we DO NOT need to check this
-  //         res.status(404).json({
-  //           error: "assignmentId or studentId doesn't match"
-  //         })
-  //       }
-
-  //     }else{
-  //       res.status(404).json({
-  //         error: "assignmentId not found"
-  //       })
-  //     }
-  /*
-   * Generate HATEOAS links for surrounding pages.
-   */
-  // const lastPage = Math.ceil(result.count / numPerPage)
-  // const links = {}
-  // if (page < lastPage) {
-  //   links.nextPage = `/:assignmentId/submissions?page=${page + 1}`
-  //   links.lastPage = `/:assignmentId/submissions?page=${lastPage}`
-  // }
-  // if (page > 1) {
-  //   links.prevPage = `/:assignmentId/submissions?page=${page - 1}`
-  //   links.firstPage = '/:assignmentId/submissions?page=1'
-  // }
-
-  /*
-   * Construct and send response.
-   */
-  // res.status(200).json({
-  //   assignments: result.rows,
-  //   pageNumber: page,
-  //   totalPages: lastPage,
-  //   pageSize: numPerPage,
-  //   totalCount: result.count,
-  //   links: links
-  // })
-  // } catch (e) {
-  //   next(e)
-  // }
-});
+})
 
 /*
  * Route to post a new assignment submission.
@@ -242,11 +291,47 @@ router.post(
   requireAuthentication,
   upload.single("file"),
   async function (req, res, next) {
-    const assignmentId = req.params.assignmentId;
-    const resultbyId = await Assignment.findByPk(assignmentId);
+    const assignmentId = req.body.assignmentId;
+    //this is id from url
+    const Id = req.params.assignmentId
+    const resultbyId = await Assignment.findByPk(Id);
+    
+    if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
 
     if (resultbyId) {
+      if(assignmentId === Id){
       try {
+        //---------------------------AUTH------------------------------------
+    
+
+      const user = await User.findByPk(req.user);
+      // const isAdmin = user.role === "admin" ? true : false;
+      const isStudent = user.role === "student" ? true : false;
+
+      //get courseId from Assignment ID
+      //const Id = await Assignment.findByPk(req.params.assignmentId)
+      //const courseId = Id.courseId;
+
+     // const courseData = await Course.findOne({where:{id:courseId}})
+      if (!(
+            
+            (isStudent === user.id)
+          )
+        ) {
+          res
+            .status(403)
+            .send({ error: "Unauthorized to access the specified resource." });
+          return;
+        }
+
+    //-----------------------------------------
+
+
         const submissionBody = {
           assignmentId: assignmentId,
           studentId: req.body.studentId,
@@ -259,7 +344,10 @@ router.post(
           SubmissionClientFields
         );
         if (submission) {
-          res.status(201).send({ id: submission.id });
+          res.status(201).send({ 
+            id: submission.id,
+            url:  `/api/uploads/${submission.id}.pdf`, 
+          });
         }
       } catch (e) {
         //err request json body
@@ -271,11 +359,18 @@ router.post(
         }
       }
     } else {
-      res.status(404).json({
-        error: "assignmentId not found",
+      res.status(400).json({
+        error: "assignmentId not match",
       });
     }
-  }
+  }else{
+    
+
+    res.status(404).json({
+      error: "assignmentId not found",
+    });
+  }}
+
 );
 
 module.exports = router;
