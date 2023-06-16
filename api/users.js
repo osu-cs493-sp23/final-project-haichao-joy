@@ -165,6 +165,7 @@ router.post('/', async function (req, res, next) {
 
 // user log in 
 router.post('/login', async function (req, res, next) {
+  console.log('req.body:', req.body); // log request body
   if (req.body && req.body.email && req.body.password) {
     try {
       const authenticated = await validateUser(

@@ -3,6 +3,7 @@ const { ValidationError } = require('sequelize')
 
 const { Assignment, AssignmentClientFields } = require('../models/assignment')
 
+const assignments = require('../data/assignments');
 
 const { generateAuthToken, requireAuthentication } = require("../lib/auth")
 const router = Router()
@@ -117,6 +118,49 @@ router.delete('/:assignmentId',async function (req, res, next) {
 router.get('/:assignmentId/submissions', async function (req, res, next) {
   const assignmentId = req.params.assignmentId
   const studentId = req.query.studentId
+  
+  console.log("  -- req.query:", req.query)
+  let page = parseInt(req.query.page) || 1;
+  const pageSize = 10;
+  const lastPage = Math.ceil(assignments.length / pageSize);
+  page = page < 1 ? 1 : page;
+  page = page > lastPage ? lastPage : page;
+
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize;
+  const pageAssignments = assignments.slice(start, end);
+
+  /*
+   * Generate HATEOAS links for surrounding pages.
+   */
+  const links = {};
+  if (page < lastPage) {
+    links.nextPage = `/:assignmentId/submissions?page=${page + 1}`;
+    links.lastPage = `/:assignmentId/submissions?page=${lastPage}`;
+  }
+  if (page > 1) {
+    links.prevPage = `/:assignmentId/submissions?page=${page - 1}`;
+    links.firstPage = '/:assignmentId/submissions?page=1';
+  }
+
+  /*
+   * Construct and send response.
+   */
+  try {
+    //const result = await Course.findAndCountAll();
+    res.status(200).json({
+      //courses: result.rows,
+      assignments: pageAssignments,
+      page: page,
+      pageSize: pageSize,
+      lastPage: lastPage,
+      total: assignments.length,
+      links: links
+    });
+  } catch (e) {
+    next(e);
+  }
+
   //paging, fetch by id and studentid
 
   // let page = parseInt(req.query.page) || 1
@@ -124,35 +168,35 @@ router.get('/:assignmentId/submissions', async function (req, res, next) {
   // const numPerPage = 10
   // const offset = (page - 1) * numPerPage
 
-  try {
-    const result = await Assignment.findByPk(assignmentId
+  // try {
+  //   const result = await Assignment.findByPk(assignmentId
       
-    //   {
-       // limit: numPerPage,
-       // offset: offset
-    // }
-    )
-      if(result){
-        //res.send(result)
-        const result = await Submission.findOne({ 
-          where: { 
-            assignmentId: assignmentId,
-            studentId: studentId
-            } })
-        if(result){
-          res.send(result)
-        }else{
-          //we DO NOT need to check this
-          res.status(404).json({
-            error: "assignmentId or studentId doesn't match"
-          })
-        }
+  //   //   {
+  //      // limit: numPerPage,
+  //      // offset: offset
+  //   // }
+  //   )
+  //     if(result){
+  //       //res.send(result)
+  //       const result = await Submission.findOne({ 
+  //         where: { 
+  //           assignmentId: assignmentId,
+  //           studentId: studentId
+  //           } })
+  //       if(result){
+  //         res.send(result)
+  //       }else{
+  //         //we DO NOT need to check this
+  //         res.status(404).json({
+  //           error: "assignmentId or studentId doesn't match"
+  //         })
+  //       }
         
-      }else{
-        res.status(404).json({
-          error: "assignmentId not found"
-        })
-      }
+  //     }else{
+  //       res.status(404).json({
+  //         error: "assignmentId not found"
+  //       })
+  //     }
     /*
      * Generate HATEOAS links for surrounding pages.
      */
@@ -178,9 +222,9 @@ router.get('/:assignmentId/submissions', async function (req, res, next) {
     //   totalCount: result.count,
     //   links: links
     // })
-  } catch (e) {
-    next(e)
-  }
+  // } catch (e) {
+  //   next(e)
+  // }
 })
 
 
