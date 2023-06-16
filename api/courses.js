@@ -61,6 +61,13 @@ router.get("/", async function (req, res, next) {
  ********************************************************************/
 router.post("/", requireAuthentication, async function (req, res, next) {
   try {
+    if (!req.user) {
+      res
+        .status(403)
+        .send({ error: "Unauthorized to access the specified resource." });
+      return;
+    }
+
     const user = await User.findByPk(req.user);
     const isAdmin = user.role === "admin" ? true : false;
 
@@ -108,6 +115,14 @@ router.get("/:id", async function (req, res, next) {
  ********************************************************************/
 router.patch("/:id", requireAuthentication, async function (req, res, next) {
   const courseId = req.params.id;
+
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
+
   try {
     const courseData = await Course.findOne({ where: { id: courseId } });
 
@@ -161,6 +176,14 @@ router.patch("/:id", requireAuthentication, async function (req, res, next) {
  ********************************************************************/
 router.delete("/:id", requireAuthentication, async function (req, res, next) {
   const courseId = req.params.id;
+
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
+
   try {
     const courseData = await Course.findOne({ where: { id: courseId } });
 
@@ -207,6 +230,13 @@ router.delete("/:id", requireAuthentication, async function (req, res, next) {
  * the instructorId of the Course can fetch the list of enrolled students.
  *******************************************************************/
 router.get("/:id/students", async function (req, res, next) {
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
+
   const courseId = req.params.id;
   var courseData = null;
 
@@ -276,6 +306,13 @@ router.get("/:id/students", async function (req, res, next) {
  * of the Course can update the students enrolled in the Course.
  *******************************************************************/
 router.post("/:id/students", async function (req, res, next) {
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
+
   // Check the request body
   if (!(req.body && (req.body.add || req.body.remove))) {
     res.status(400).send({
@@ -365,6 +402,13 @@ router.post("/:id/students", async function (req, res, next) {
  * of the Course can fetch the course roster.
  *******************************************************************/
 router.get("/:id/roster", async function (req, res, next) {
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
+
   const courseId = req.params.id;
   var courseData = null;
 
@@ -438,6 +482,13 @@ router.get("/:id/roster", async function (req, res, next) {
  * of the Course can update the students enrolled in the Course.
  *******************************************************************/
 router.get("/:id/assignments", async function (req, res, next) {
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
+
   const courseId = req.params.id;
   var courseData = null;
 
