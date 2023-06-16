@@ -304,12 +304,12 @@ router.get(
         //assignmentId and studentId
         res.status(200).json({
           result1,
-          //submissions: result1.rows,
-          // pageNumber: page,
-          // totalPages: lastPage,
-          // pageSize: numPerPage,
-          // totalCount: result1.count,
-          // links: links
+          submissions: result1.rows,
+          pageNumber: page,
+          totalPages: lastPage,
+          pageSize: numPerPage,
+          totalCount: result1.count,
+          links: links,
         });
       } else {
         //only assignmentId
