@@ -166,6 +166,66 @@ router.patch("/:assignmentId", requireAuthentication, async function (req, res, 
  * Route to delete a assignment.
  */
 router.delete("/:assignmentId", requireAuthentication, async function (req, res, next) {
+  
+  if (!req.user) {
+    res
+      .status(403)
+      .send({ error: "Unauthorized to access the specified resource." });
+    return;
+  }
+  const assignmentId = req.params.assignmentId;
+
+ 
+  try {
+
+  //---------------------------AUTH------------------------------------
+    
+
+  const user = await User.findByPk(req.user);
+  const isAdmin = user.role === "admin" ? true : false;
+  const isInstructor = user.role === "instructor" ? true : false;
+
+  //get courseId from Assignment ID
+  // const Id = await Assignment.findByPk(req.params.assignmentId)
+  // const courseId = Id.courseId;
+  // const courseData = await Course.findOne({where:{id:courseId}})
+  if (!(
+        isAdmin ||
+        (isInstructor && courseData.dataValues.instructorId === user.id)
+      )
+    ) {
+      res
+        .status(403)
+        .send({ error: "Unauthorized to access the specified resource." });
+      return;
+    }
+
+  //-----------------------------------------
+    const test = await Assignment.findByPk(assignmentId)
+    console.log(test)
+    if(!test){
+      res.status(404).json({
+        error: "assignmentId not found",
+      });
+      return
+    }{
+
+    const result = await Assignment.destroy({ where: { id: assignmentId } });
+    
+      res.status(204).send();}
+    
+  } catch (e) {
+    next(e);
+  }
+  
+});
+
+/*
+ * Route to fetch info about a specific assignments.
+ */
+router.get("/:assignmentId/submissions", requireAuthentication, async function (req, res, next) {
+
+
   if (!req.user) {
     res
       .status(403)
@@ -173,56 +233,12 @@ router.delete("/:assignmentId", requireAuthentication, async function (req, res,
     return;
   }
 
-  const assignmentId = req.params.assignmentId;
-  try {
 
-    //---------------------------AUTH------------------------------------
-    
-
-    const user = await User.findByPk(req.user);
-    const isAdmin = user.role === "admin" ? true : false;
-    const isInstructor = user.role === "instructor" ? true : false;
-
-    //get courseId from Assignment ID
-    const Id = await Assignment.findByPk(req.params.assignmentId)
-    const courseId = Id.courseId;
-
-    const courseData = await Course.findOne({where:{id:courseId}})
-    if (!(
-          isAdmin ||
-          (isInstructor && courseData.dataValues.instructorId === user.id)
-        )
-      ) {
-        res
-          .status(403)
-          .send({ error: "Unauthorized to access the specified resource." });
-        return;
-      }
-
-    //-----------------------------------------
-
-    const result = await Assignment.destroy({ where: { id: assignmentId } });
-    if (result > 0) {
-      res.status(204).send();
-    } else {
-      //id not found
-      res.status(404).json({
-        error: "assignmentId not found",
-      });
-    }
-  } catch (e) {
-    next(e);
-  }
-  // }
-});
-
-/*
- * Route to fetch info about a specific assignments.
- */
-router.get("/:assignmentId/submissions",  async function (req, res, next) {
   const assignmentId = req.params.assignmentId
   const assignment = await Assignment.findByPk(assignmentId)
-
+  // if(!assignment){
+    
+  // }
 
   let page = parseInt(req.query.page) || 1
     page = page < 1 ? 1 : page
@@ -248,6 +264,30 @@ router.get("/:assignmentId/submissions",  async function (req, res, next) {
       links.prevPage = `/assignments/${assignmentId}/submissions?page=${page - 1}`
       links.firstPage = `/assignments/${assignmentId}/submissions?page=1`
     }
+
+
+    
+    //----auth---
+    const user = await User.findByPk(req.user);
+    const isAdmin = user.role === "admin" ? true : false;
+    const isInstructor = user.role === "instructor" ? true : false;
+
+    //get courseId from Assignment ID
+    const Id = await Assignment.findByPk(req.params.assignmentId)
+    const courseId = Id.courseId;
+
+    const courseData = await Course.findOne({where:{id:courseId}})
+    if (!(
+          isAdmin ||
+          (isInstructor && courseData.dataValues.instructorId === user.id)
+        )
+      ) {
+        res
+          .status(403)
+          .send({ error: "Unauthorized to access the specified resource." });
+        return;
+      }
+  
   if (assignment) {
     const studentId = req.query.studentId
     if(studentId){
@@ -256,16 +296,18 @@ router.get("/:assignmentId/submissions",  async function (req, res, next) {
           assignmentId: assignmentId,
           studentId: studentId
           } })
-
+          //assignmentId and studentId
       res.status(200).json({
-        submissions: result1.rows,
-        pageNumber: page,
-        totalPages: lastPage,
-        pageSize: numPerPage,
-        totalCount: result1.count,
-        links: links
+        result1
+        //submissions: result1.rows,
+        // pageNumber: page,
+        // totalPages: lastPage,
+        // pageSize: numPerPage,
+        // totalCount: result1.count,
+        // links: links
       })
     }else{
+      //only assignmentId
       res.status(200).json({
         submissions: result.rows,
         pageNumber: page,
@@ -279,7 +321,10 @@ router.get("/:assignmentId/submissions",  async function (req, res, next) {
     
   }
   else {
-    next()
+    res.status(404).json({
+      error: "assignmentId not found",
+    })
+    
   }
 })
 
@@ -308,19 +353,19 @@ router.post(
       try {
         //---------------------------AUTH------------------------------------
     
-
-      const user = await User.findByPk(req.user);
+        const user = await User.findByPk(req.user);
       // const isAdmin = user.role === "admin" ? true : false;
       const isStudent = user.role === "student" ? true : false;
+      
+      const userCoursesEnrolledin = await Course.findAll({
+        include: { model: User, 
+        as: "users", 
+        where: { id: user.id}, 
+      }})
 
-      //get courseId from Assignment ID
-      //const Id = await Assignment.findByPk(req.params.assignmentId)
-      //const courseId = Id.courseId;
-
-     // const courseData = await Course.findOne({where:{id:courseId}})
       if (!(
             
-            (isStudent === user.id)
+            (isStudent === user.id) && userCoursesEnrolledin
           )
         ) {
           res
